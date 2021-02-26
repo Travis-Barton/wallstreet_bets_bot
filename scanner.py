@@ -40,9 +40,10 @@ if __name__ == '__main__':
 
     for post in stream:
         if isinstance(post, Submission):
-            info_data = info_data.append({'type': 'submission', 'id': post.id, 'text': post.selftext,
+            info_data = info_data.append({'type': 'submission', 'id': post.id,
+                                          'text': post.title + ' ' + post.selftext if post.selftext is not None else post.title,
                                           'date': post.created_utc, 'votes_ratio': post.upvote_ratio, 'url': post.url,
-                                          'author': post.author}, ignore_index=True)
+                                          'author': post.author, 'title': post.title}, ignore_index=True)
 
         elif isinstance(post, Comment):
             info_data = info_data.append({'type': 'comment', 'id': post.id, 'text': post.body, 'date': post.created_utc,
