@@ -38,32 +38,42 @@ if __name__ == '__main__':
     stream = praw.models.util.stream_generator(lambda **kwargs: submissions_and_comments(subreddit, **kwargs),
                                                skip_existing=True)
 
+    attempts = 0
     for post in stream:
-        if isinstance(post, Submission):
-            info_data = info_data.append({'type': 'submission', 'id': post.id,
-                                          'text': post.title + ' ' + post.selftext if post.selftext is not None else post.title,
-                                          'date': post.created_utc, 'votes_ratio': post.upvote_ratio, 'url': post.url,
-                                          'author': post.author, 'title': post.title}, ignore_index=True)
+        try:
+            if isinstance(post, Submission):
+                info_data = info_data.append({'type': 'submission', 'id': post.id,
+                                              'text': post.title + ' ' + post.selftext if post.selftext is not None else post.title,
+                                              'date': post.created_utc, 'votes_ratio': post.upvote_ratio, 'url': post.url,
+                                              'author': post.author, 'title': post.title}, ignore_index=True)
 
-        elif isinstance(post, Comment):
-            info_data = info_data.append({'type': 'comment', 'id': post.id, 'text': post.body, 'date': post.created_utc,
-                                          'votes_ratio': post.score, 'url': post.submission.url, 'author': post.author},
-                                         ignore_index=True)
-        else:
-            print('something... else')
-            break
-        new_time = time.time()
-        if new_time - start_time > 3600:
-            tab = PrettyTable()
-            tab.title = f'{len(info_data)} rows, {np.round((new_time - start_time)/3600, 3)} ' \
-                        f'hrs since last checkin'
-            tab.field_names = ['post type', 'count', 'increase from last report']
-            tab.add_row([B + 'submission' + N, len(info_data.query('type == "submission"')),
-                         len(info_data.query(f'(date > {new_time}) & (type == "submission")'))])
-            tab.add_row([Y + 'comment' + N, len(info_data.query('type == "comment"')),
-                         len(info_data.query(f'(date > {new_time}) & (type == "comment")'))])
-            print(tab)
-            info_data.to_csv(f'/Users/biscuit/Documents/GitHub/wallstreet_bets_bot/info_saves/info_data_'
-                             f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}).csv')
-            info_data.to_csv(f'/Users/biscuit/Documents/GitHub/wallstreet_bets_bot/info_data.csv')
-            start_time = new_time
+            elif isinstance(post, Comment):
+                info_data = info_data.append({'type': 'comment', 'id': post.id, 'text': post.body, 'date': post.created_utc,
+                                              'votes_ratio': post.score, 'url': post.submission.url, 'author': post.author},
+                                             ignore_index=True)
+            else:
+                print('something... else')
+                break
+            new_time = time.time()
+            if new_time - start_time > 3600:
+                tab = PrettyTable()
+                tab.title = f'{len(info_data)} rows, {np.round((new_time - start_time)/3600, 3)} ' \
+                            f'hrs since last checkin'
+                tab.field_names = ['post type', 'count', 'increase from last report']
+                tab.add_row([B + 'submission' + N, len(info_data.query('type == "submission"')),
+                             len(info_data.query(f'(date > {start_time}) & (type == "submission")'))])
+                tab.add_row([Y + 'comment' + N, len(info_data.query('type == "comment"')),
+                             len(info_data.query(f'(date > {start_time}) & (type == "comment")'))])
+                print(tab)
+                info_data.to_csv(f'/Users/biscuit/Documents/GitHub/wallstreet_bets_bot/info_saves/info_data_'
+                                 f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}).csv')
+                info_data.to_csv(f'/Users/biscuit/Documents/GitHub/wallstreet_bets_bot/info_data.csv')
+                start_time = new_time
+        except Exception as e:
+            print(f'there was an error {e}\nwaiting 10 seconds and trying again. This is attempt {attempts+1}/10')
+            time.sleep(10)
+            attempts += 1
+            if attempts > 9:
+                print('too many faliures, sleeping for 5 min')
+                attempts = 0
+                time.sleep(60*5)
